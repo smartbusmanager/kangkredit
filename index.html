@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KangKredit v4 Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+        body { font-family: 'Inter', sans-serif; }
+        /* Memperhalus tampilan scrollbar pada histori */
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+	<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+
+<div class="max-w-7xl mx-auto p-4 md:p-8">
+    
+    <header class="mb-6 flex flex-col md:flex-row justify-between items-center bg-white p-5 rounded-3xl shadow-sm gap-4 border border-slate-200">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 p-2.5 rounded-2xl text-white font-black text-xl italic shadow-lg shadow-blue-200">KK</div>
+            <div>
+                <h1 class="text-xl font-black tracking-tight">KangKredit <span class="text-blue-600 italic text-sm">v4.1 Pro</span></h1>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Sales Management System</p>
+            </div>
+        </div>
+        
+		<div id="connection-status" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 transition-all duration-300">
+    <div id="dot-status" class="w-2.5 h-2.5 rounded-full bg-slate-400 animate-pulse"></div>
+    <span id="text-status" class="text-[10px] font-black uppercase tracking-widest text-slate-500">Checking...</span>
+</div>
+
+        <div class="flex flex-wrap justify-center gap-2">
+            <button onclick="showTab('transaksi')" class="px-5 py-2.5 bg-slate-800 text-white rounded-2xl font-bold text-sm hover:bg-slate-700 transition flex items-center gap-2">📝 Transaksi</button>
+            <button onclick="showTab('piutang')" class="px-5 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-2xl font-bold text-sm hover:bg-slate-50 transition flex items-center gap-2">📉 Piutang & WA</button>
+            <div class="hidden md:block w-px h-8 bg-slate-200 mx-2"></div>
+            <button onclick="exportData()" class="px-4 py-2 text-slate-500 hover:text-blue-600 transition text-xs font-bold uppercase">Backup</button>
+            <input type="file" id="importFile" class="hidden" onchange="importData(event)">
+            <button onclick="document.getElementById('importFile').click()" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-2xl text-xs font-bold hover:bg-blue-100 transition">Restore</button>
+        </div>
+    </header>
+
+    <div class="mb-8">
+        <div class="flex flex-col md:flex-row items-end gap-4 mb-4">
+            <div class="flex-1 bg-white p-4 rounded-3xl shadow-sm border border-slate-200 flex flex-wrap items-end gap-4">
+                <div class="flex-1 min-w-[120px]">
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Dari Tanggal</label>
+                    <input type="date" id="cfTanggalMulai" onchange="updateCashFlow()" class="w-full p-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-blue-500 bg-slate-50 font-semibold">
+                </div>
+                <div class="flex-1 min-w-[120px]">
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Sampai Tanggal</label>
+                    <input type="date" id="cfTanggalSelesai" onchange="updateCashFlow()" class="w-full p-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-blue-500 bg-slate-50 font-semibold">
+                </div>
+                <div class="flex-[1.5] min-w-[150px]">
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Filter Wilayah</label>
+                    <input type="text" id="cfFilterAlamat" onkeyup="updateCashFlow()" class="w-full p-2 text-xs border border-slate-200 rounded-xl outline-none focus:border-blue-500 bg-slate-50" placeholder="Ketik Alamat/Desa...">
+                </div>
+                <button onclick="resetCFFilter()" class="px-4 py-2 bg-slate-100 text-slate-500 text-[10px] font-black rounded-xl hover:bg-slate-200 transition uppercase tracking-widest">Reset</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-blue-600 p-6 rounded-[2rem] shadow-xl shadow-blue-100 text-white relative overflow-hidden">
+                <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-500 rounded-full opacity-50"></div>
+                <p class="text-[10px] font-bold uppercase tracking-widest opacity-80">Total Omset</p>
+                <h2 id="statOmset" class="text-2xl font-black tracking-tighter mt-1">Rp 0</h2>
+            </div>
+            <div class="bg-emerald-500 p-6 rounded-[2rem] shadow-xl shadow-emerald-100 text-white relative overflow-hidden">
+                <div class="absolute -right-4 -top-4 w-24 h-24 bg-emerald-400 rounded-full opacity-50"></div>
+                <p class="text-[10px] font-bold uppercase tracking-widest opacity-80">Uang Masuk (Cash In)</p>
+                <h2 id="statCashIn" class="text-2xl font-black tracking-tighter mt-1">Rp 0</h2>
+            </div>
+            <div class="bg-rose-500 p-6 rounded-[2rem] shadow-xl shadow-rose-100 text-white relative overflow-hidden">
+                <div class="absolute -right-4 -top-4 w-24 h-24 bg-rose-400 rounded-full opacity-50"></div>
+                <p class="text-[10px] font-bold uppercase tracking-widest opacity-80">Total Piutang</p>
+                <h2 id="statPiutang" class="text-2xl font-black tracking-tighter mt-1">Rp 0</h2>
+            </div>
+        </div>
+    </div>
+
+    <div id="transaksi" class="tab-content active">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<div class="lg:col-span-4 space-y-4">
+    <div class="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden sticky top-4">
+        <div class="bg-slate-800 p-6">
+            <h3 class="font-black text-white uppercase text-xs tracking-[0.2em] flex items-center gap-2">
+                <span class="bg-blue-500 p-1 rounded-md text-[10px]">NEW</span> 
+                Input Penjualan
+            </h3>
+        </div>
+
+        <div class="p-8 space-y-5">
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 mb-1 block">1. Nama Lengkap</label>
+                <input type="text" id="pembeli" class="w-full p-3.5 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:bg-white focus:border-blue-500 transition-all font-semibold text-slate-700" placeholder="Nama Lengkap Pembeli">
+            </div>
+
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 mb-1 block">2. Alamat Lengkap</label>
+                <textarea id="alamat" class="w-full p-3.5 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:bg-white focus:border-blue-500 transition-all h-20 resize-none font-medium text-slate-600" placeholder="Desa, Kec, No Rumah"></textarea>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 mb-1 block">3. No WhatsApp</label>
+                <input type="text" id="no_hp" class="w-full p-3.5 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:bg-white focus:border-blue-500 transition-all font-semibold text-slate-700" placeholder="08xxxx">
+            </div>
+
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 mb-1 block">4. Nama Barang</label>
+                <input type="text" id="barang" class="w-full p-3.5 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:bg-white focus:border-emerald-500 transition-all font-semibold text-slate-700" placeholder="Merk/Type Barang">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 mb-1 block">5. Harga Total</label>
+                    <input type="number" id="harga" class="w-full p-3.5 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:bg-white focus:border-slate-800 font-black text-slate-800" placeholder="Rp">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 mb-1 block">6. Metode</label>
+                    <select id="metode" onchange="updateLabelBayar()" class="w-full p-3.5 bg-slate-50 border-2 border-slate-50 rounded-2xl outline-none focus:border-blue-500 font-bold text-blue-600 cursor-pointer">
+                        <option value="Cash">💵 CASH</option>
+                        <option value="Kredit">📉 KREDIT</option>
+                    </select>
+                </div>
+            </div>
+			
+			<div id="containerBayar" class="pt-4 border-t border-slate-100" style="display: none;">
+    <label class="text-[10px] font-black text-orange-600 uppercase tracking-widest ml-2 mb-1 block italic">📉 Uang Muka (DP)</label>
+    <input type="number" id="bayarAwal" class="w-full p-4 bg-orange-50 border-2 border-orange-50 rounded-2xl outline-none focus:bg-white focus:border-orange-500 font-black text-orange-700 text-lg shadow-inner" placeholder="Masukkan DP Rp">
+</div>
+
+            <div class="pt-4 border-t border-slate-100">
+                <label id="labelBayar" class="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-2 mb-1 block italic">💰 Bayar Tunai</label>
+                <input type="number" id="bayarAwal" class="w-full p-4 bg-emerald-50 border-2 border-emerald-50 rounded-2xl outline-none focus:bg-white focus:border-emerald-500 font-black text-emerald-700 text-lg shadow-inner" placeholder="Rp">
+            </div>
+
+            <button onclick="simpanTransaksi()" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-2xl font-black shadow-xl shadow-blue-200 hover:shadow-blue-300 hover:-translate-y-1 active:scale-95 transition-all duration-300 uppercase text-xs tracking-[0.2em]">
+                🚀 Proses Penjualan
+            </button>
+        </div>
+    </div>
+</div>
+
+            <div class="lg:col-span-8 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
+                <div class="flex flex-col md:flex-row justify-between items-center border-b border-slate-100 pb-4 mb-4 gap-4">
+                    <h3 class="font-black text-slate-700 uppercase text-xs tracking-widest">Histori Penjualan Terakhir</h3>
+                    <div class="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100 w-full md:w-auto">
+                        <input type="text" id="filterGeneral" onkeyup="renderTransaksi()" class="p-2 bg-transparent text-xs w-full md:w-48 outline-none" placeholder="Cari Nama/HP/Barang...">
+                        <input type="date" id="filterTanggal" onchange="renderTransaksi()" class="p-2 bg-white rounded-xl text-[10px] outline-none shadow-sm border border-slate-100">
+                    </div>
+                </div>
+                <div class="overflow-x-auto custom-scroll">
+                    <table class="w-full text-left text-xs border-separate border-spacing-y-2">
+                        <thead>
+                            <tr class="text-slate-400 font-bold uppercase tracking-widest text-[10px]">
+                                <th class="px-4 py-2">Tgl</th>
+                                <th class="px-4 py-2">Pelanggan</th>
+                                <th class="px-4 py-2">Barang</th>
+                                <th class="px-4 py-2">Total Harga</th>
+                                <th class="px-4 py-2">Sisa</th>
+                                <th class="px-4 py-2 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listTransaksi">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="piutang" class="tab-content">
+        <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-200">
+            <h3 class="font-black text-slate-700 uppercase text-xs tracking-widest mb-8 border-b border-slate-100 pb-4">Kartu Piutang Aktif Pelanggan</h3>
+            <div id="kartuPiutangContainer" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"></div>
+        </div>
+    </div>
+</div>
+
+<div id="modalEditTransaksi" class="modal flex items-center justify-center p-4" style="display: none;">
+    <div class="bg-white p-8 rounded-[2rem] shadow-2xl w-full max-w-md border border-slate-100">
+        <h3 class="font-black text-slate-800 uppercase text-sm border-b pb-4 mb-6 flex items-center gap-2">✏️ Edit Data Penjualan</h3>
+        <input type="hidden" id="editMainTransId">
+        <div class="space-y-4">
+            <input type="text" id="editMainPembeli" class="w-full p-3 border rounded-2xl bg-slate-50 outline-none focus:border-blue-500" placeholder="Nama Pembeli">
+            <input type="text" id="editMainNoHp" class="w-full p-3 border rounded-2xl bg-slate-50 outline-none focus:border-blue-500" placeholder="No HP">
+            <textarea id="editMainAlamat" class="w-full p-3 border rounded-2xl bg-slate-50 outline-none focus:border-blue-500 h-20 resize-none" placeholder="Alamat"></textarea>
+            <input type="text" id="editMainBarang" class="w-full p-3 border rounded-2xl bg-slate-50 outline-none focus:border-blue-500" placeholder="Barang">
+            <input type="number" id="editMainHarga" class="w-full p-3 border rounded-2xl bg-slate-50 outline-none focus:border-blue-500 font-bold" placeholder="Harga Total">
+        </div>
+        <div class="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-50">
+            <button onclick="closeModal('modalEditTransaksi')" class="px-6 py-2.5 bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm">Batal</button>
+            <button onclick="updateTransaksiUtama()" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-blue-100">Update Data</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalEditCicilan" class="modal flex items-center justify-center p-4" style="display: none;">
+    <div class="bg-white p-8 rounded-[2rem] shadow-2xl w-full max-w-sm border border-slate-100">
+        <h3 class="font-black text-emerald-800 uppercase text-sm border-b pb-4 mb-6">✏️ Edit Nominal Bayar</h3>
+        <input type="hidden" id="editTransId">
+        <input type="hidden" id="editCicilIdx">
+        <input type="number" id="editCicilNominal" class="w-full p-5 border rounded-2xl bg-slate-50 outline-none focus:border-emerald-500 text-2xl font-black text-center text-emerald-600">
+        <div class="flex justify-end gap-3 mt-8">
+            <button onclick="closeModal('modalEditCicilan')" class="px-6 py-2.5 bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm">Batal</button>
+            <button onclick="updateCicilan()" class="px-6 py-2.5 bg-emerald-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-emerald-100">Simpan</button>
+        </div>
+    </div>
+</div>
+
+<script>
+
+
+// --- 1. CONFIG & INIT ---
+const firebaseConfig = {
+    databaseURL: "https://bus-managemen-5fca8-default-rtdb.asia-southeast1.firebasedatabase.app/",
+    projectId: "bus-managemen-5fca8",
+};
+
+// Cek apakah firebase sudah inisialisasi untuk menghindari error "already exists"
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.database();
+const dbRef = db.ref("kangkredit");
+
+// --- 2. DATA LOADING (Lokal Dulu Baru Cloud) ---
+let dataTransaksi = JSON.parse(localStorage.getItem('db_penjualan_v4')) || [];
+
+// Jalankan render awal dari data lokal agar aplikasi tidak terlihat kosong
+window.onload = () => {
+    renderTransaksi();
+    if (typeof renderPiutang === 'function') renderPiutang();
+    updateCashFlow();
+};
+
+// --- 3. LOGIKA KONEKSI & SYNC ---
+const dotStatus = document.getElementById('dot-status');
+const textStatus = document.getElementById('text-status');
+const connBox = document.getElementById('connection-status');
+
+function updateStatus(isOnline) {
+    if (!dotStatus || !textStatus) return;
+    if (isOnline) {
+        dotStatus.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]";
+        textStatus.innerText = "Cloud Online";
+        textStatus.className = "text-[10px] font-black uppercase tracking-widest text-emerald-600";
+        connBox.className = "flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100";
+    } else {
+        dotStatus.className = "w-2.5 h-2.5 rounded-full bg-rose-500";
+        textStatus.innerText = "Offline Mode";
+        textStatus.className = "text-[10px] font-black uppercase tracking-widest text-rose-600";
+        connBox.className = "flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 border border-rose-100";
+    }
+}
+
+// Pantau Koneksi
+db.ref(".info/connected").on("value", (snap) => {
+    updateStatus(snap.val() === true);
+});
+
+// Tarik Data Cloud
+dbRef.on("value", (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+        // Jika data di Cloud ada, timpa data lokal
+        dataTransaksi = Object.values(data);
+        localStorage.setItem('db_penjualan_v4', JSON.stringify(dataTransaksi));
+        
+        // Refresh Tampilan
+        renderTransaksi();
+        if (typeof renderPiutang === 'function') renderPiutang();
+        updateCashFlow();
+    }
+});
+
+// --- 4. FUNGSI SIMPAN & LOGIKA FORM ---
+function saveToLocal() {
+    // Simpan Lokal
+    localStorage.setItem('db_penjualan_v4', JSON.stringify(dataTransaksi));
+    // Kirim Cloud
+    dbRef.set(dataTransaksi).catch(err => console.error("Cloud Error:", err));
+    updateCashFlow();
+}
+
+function updateLabelBayar() {
+    const metode = document.getElementById('metode').value;
+    const container = document.getElementById('containerBayar'); // Pastikan ID ini sesuai di HTML
+    const label = document.getElementById('labelBayar');
+    const input = document.getElementById('bayarAwal');
+
+    if (metode === 'Cash') {
+        if(container) container.style.display = 'none';
+        if(input) input.value = '';
+    } else {
+        if(container) container.style.display = 'block';
+        if(label) label.innerText = '📉 Uang Muka (DP)';
+    }
+}
+
+function calculateSisa(id) {
+    const idx = dataTransaksi.findIndex(t => t.id === id);
+    if(idx === -1) return;
+    const totalBayar = dataTransaksi[idx].cicilan.reduce((sum, c) => sum + (parseFloat(c.jml) || 0), 0);
+    dataTransaksi[idx].sisa = Math.max(0, dataTransaksi[idx].harga - totalBayar);
+    dataTransaksi[idx].status = dataTransaksi[idx].sisa <= 0 ? "Lunas" : "Kredit";
+}
+
+function resetForm() {
+    document.querySelectorAll('#transaksi input, #transaksi textarea').forEach(i => i.value = '');
+    document.getElementById('metode').value = 'Cash';
+    updateLabelBayar();
+}
+// ... masukkan fungsi renderTransaksi, renderPiutang, dll di bawah sini ...
+
+
+
+    function updateCashFlow() {
+        const tglMulai = document.getElementById('cfTanggalMulai').value;
+        const tglSelesai = document.getElementById('cfTanggalSelesai').value;
+        const filterAlamat = document.getElementById('cfFilterAlamat').value.toLowerCase();
+
+        let omset = 0, cashIn = 0, piutang = 0;
+
+        dataTransaksi.forEach(t => {
+            let matchTgl = true;
+            if (tglMulai && tglSelesai) {
+                matchTgl = t.tanggal >= tglMulai && t.tanggal <= tglSelesai;
+            } else if (tglMulai) {
+                matchTgl = t.tanggal >= tglMulai;
+            } else if (tglSelesai) {
+                matchTgl = t.tanggal <= tglSelesai;
+            }
+
+            const matchAlamat = filterAlamat === "" || (t.alamat && t.alamat.toLowerCase().includes(filterAlamat));
+
+            if (matchTgl && matchAlamat) {
+                omset += t.harga;
+                piutang += t.sisa;
+                cashIn += t.cicilan.reduce((sum, c) => sum + (parseFloat(c.jml) || 0), 0);
+            }
+        });
+
+        document.getElementById('statOmset').innerText = `Rp ${omset.toLocaleString('id-ID')}`;
+        document.getElementById('statCashIn').innerText = `Rp ${cashIn.toLocaleString('id-ID')}`;
+        document.getElementById('statPiutang').innerText = `Rp ${piutang.toLocaleString('id-ID')}`;
+    }
+
+    function simpanTransaksi() {
+        const pembeli = document.getElementById('pembeli').value;
+        const no_hp = document.getElementById('no_hp').value;
+        const alamat = document.getElementById('alamat').value;
+        const barang = document.getElementById('barang').value;
+        const harga = parseFloat(document.getElementById('harga').value) || 0;
+        const bayarAwal = parseFloat(document.getElementById('bayarAwal').value) || 0;
+        const metode = document.getElementById('metode').value;
+        const tglInput = new Date();
+
+        if (!pembeli || !barang || harga <= 0) return alert("Mohon lengkapi data Nama, Barang, dan Harga!");
+
+        const transaksiBaru = {
+            id: Date.now(),
+            tanggal: tglInput.toISOString().split('T')[0],
+            tglDisplay: tglInput.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    }),
+    pembeli, no_hp, alamat, barang, harga, metode,
+    status: "Kredit",
+    cicilan: [{ 
+        // Ganti juga yang di dalam cicilan:
+        tgl: tglInput.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }), 
+        jml: bayarAwal 
+    }]
+};
+
+        dataTransaksi.push(transaksiBaru);
+        calculateSisa(transaksiBaru.id);
+        saveToLocal();
+        resetForm();
+        renderTransaksi();
+        alert("Transaksi Berhasil Disimpan!");
+    }
+
+function renderTransaksi() {
+    const container = document.getElementById('listTransaksi');
+    const filterText = document.getElementById('filterGeneral').value.toLowerCase();
+    const filterDate = document.getElementById('filterTanggal').value;
+
+    const filtered = dataTransaksi.filter(t => {
+        const matchText = t.pembeli.toLowerCase().includes(filterText) || 
+                          t.barang.toLowerCase().includes(filterText) || 
+                          (t.no_hp && t.no_hp.includes(filterText)) ||
+                          (t.alamat && t.alamat.toLowerCase().includes(filterText));
+        const matchDate = filterDate === "" || t.tanggal === filterDate;
+        return matchText && matchDate;
+    });
+
+    container.innerHTML = filtered.slice().reverse().map(t => `
+        <tr class="bg-white hover:bg-slate-50 transition-all duration-200 shadow-sm">
+            <td class="px-5 py-5 text-sm font-bold text-slate-500 border-l-4 border-slate-100 rounded-l-2xl">
+                ${t.tglDisplay || 'undefined'}
+            </td>
+            <td class="px-5 py-5">
+                <span class="text-base font-black text-slate-800 uppercase leading-tight">${t.pembeli}</span><br>
+                <span class="text-xs text-blue-600 font-bold tracking-tight">${t.no_hp || '-'}</span><br>
+                <span class="text-[11px] text-slate-500 italic font-medium">${t.alamat || '-'}</span>
+            </td>
+            <td class="px-5 py-5">
+                <span class="text-sm font-bold text-slate-700">${t.barang}</span>
+            </td>
+            <td class="px-5 py-5">
+                <span class="text-base font-black text-slate-800 tracking-tight">Rp ${t.harga.toLocaleString()}</span>
+            </td>
+            <td class="px-5 py-5">
+                <span class="text-base font-black ${t.sisa > 0 ? 'text-rose-600' : 'text-emerald-600'} tracking-tight">
+                    Rp ${t.sisa.toLocaleString()}
+                </span><br>
+                <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${t.status === 'Lunas' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}">
+                    ${t.status}
+                </span>
+            </td>
+            <td class="px-5 py-5 text-center rounded-r-2xl">
+                <div class="flex justify-center gap-2">
+                    <button onclick="openEditTransaksi(${t.id})" class="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition shadow-sm">✏️</button>
+                    <button onclick="hapusTransaksi(${t.id})" class="w-10 h-10 flex items-center justify-center bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition shadow-sm">🗑️</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderPiutang() {
+    const container = document.getElementById('kartuPiutangContainer');
+    const daftarPiutang = dataTransaksi.filter(t => t.metode === 'Kredit' && t.status === 'Kredit');
+
+    if(daftarPiutang.length === 0) {
+        container.innerHTML = "<p class='col-span-full text-center text-slate-400 py-10 italic text-sm'>Tidak ada piutang aktif.</p>";
+        return;
+    }
+
+    container.innerHTML = daftarPiutang.map(t => `
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition border-t-4 border-t-rose-500 flex flex-col justify-between">
+            <div class="mb-3">
+                <div class="flex justify-between items-start mb-1">
+                    <h4 class="font-black text-slate-800 uppercase tracking-tighter text-sm truncate pr-2" title="${t.pembeli}">${t.pembeli}</h4>
+                    <button onclick="kirimWhatsApp(${t.id})" class="text-emerald-500 hover:text-emerald-600 transition" title="Kirim WA">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    </button>
+                </div>
+                <p class="text-[10px] text-slate-400 font-bold leading-tight uppercase truncate" title="${t.barang}">${t.barang}</p>
+            </div>
+            
+            <div class="bg-slate-50 p-2 rounded-xl mb-3">
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Sisa</p>
+                <div class="text-base font-black text-rose-600">Rp ${t.sisa.toLocaleString('id-ID')}</div>
+            </div>
+
+            <div class="flex gap-1.5 mb-3">
+                <input type="number" id="inputCicil-${t.id}" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-emerald-500 font-bold text-xs" placeholder="Nominal Rp">
+                <button onclick="tambahCicilan(${t.id})" class="bg-emerald-500 text-white px-3 py-2 rounded-lg font-black text-[10px] shadow-sm hover:bg-emerald-600 transition">PAY</button>
+            </div>
+
+            <details class="text-[9px] group">
+                <summary class="font-bold text-slate-400 uppercase cursor-pointer hover:text-blue-500 transition list-none text-center bg-slate-50 py-1 rounded-md">Riwayat ▼</summary>
+                <div class="mt-2 space-y-1 max-h-24 overflow-y-auto pr-1 custom-scroll">
+                    <table class="w-full text-left">
+                        ${t.cicilan.map((c, index) => `
+                            <tr class="border-b border-slate-50 last:border-0">
+                                <td class="py-1 text-slate-400">${c.tgl}</td>
+                                <td class="py-1 font-bold text-slate-600 text-right">Rp ${c.jml.toLocaleString('id-ID')}</td>
+                                <td class="py-1 text-right">
+                                    <button onclick="openEditCicilan(${t.id}, ${index})" class="text-blue-400 mx-0.5 hover:text-blue-600">✏️</button>
+                                    <button onclick="hapusCicilan(${t.id}, ${index})" class="text-rose-300 mx-0.5 hover:text-rose-500">🗑️</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                </div>
+            </details>
+        </div>
+    `).join('');
+}
+
+    // --- OTHER HELPERS ---
+    function kirimWhatsApp(id) {
+        const t = dataTransaksi.find(item => item.id === id);
+        if(!t.no_hp) return alert("Nomor HP kosong!");
+        let no = t.no_hp.replace(/[^0-9]/g, '');
+        if(no.startsWith('0')) no = '62' + no.slice(1);
+        let riwayat = t.cicilan.map(c => `- ${c.tgl}: Rp ${c.jml.toLocaleString()}`).join('%0A');
+        const msg = `Halo *${t.pembeli}*,%0ABerikut rincian tagihan Anda:%0A%0A*Barang:* ${t.barang}%0A*Total:* Rp ${t.harga.toLocaleString()}%0A*Sisa:* *Rp ${t.sisa.toLocaleString()}*%0A%0A*Riwayat Pembayaran:*%0A${riwayat}%0A%0AMohon segera dilunasi. Terima kasih!`;
+        window.open(`https://wa.me/${no}?text=${msg}`, '_blank');
+    }
+
+    function openEditTransaksi(id) {
+        const t = dataTransaksi.find(item => item.id === id);
+        document.getElementById('editMainTransId').value = t.id;
+        document.getElementById('editMainPembeli').value = t.pembeli;
+        document.getElementById('editMainNoHp').value = t.no_hp || '';
+        document.getElementById('editMainAlamat').value = t.alamat || '';
+        document.getElementById('editMainBarang').value = t.barang;
+        document.getElementById('editMainHarga').value = t.harga;
+        document.getElementById('modalEditTransaksi').style.display = 'flex';
+    }
+
+    function updateTransaksiUtama() {
+        const id = parseInt(document.getElementById('editMainTransId').value);
+        const idx = dataTransaksi.findIndex(t => t.id === id);
+        dataTransaksi[idx].pembeli = document.getElementById('editMainPembeli').value;
+        dataTransaksi[idx].no_hp = document.getElementById('editMainNoHp').value;
+        dataTransaksi[idx].alamat = document.getElementById('editMainAlamat').value;
+        dataTransaksi[idx].barang = document.getElementById('editMainBarang').value;
+        dataTransaksi[idx].harga = parseFloat(document.getElementById('editMainHarga').value);
+        calculateSisa(id); saveToLocal(); closeModal('modalEditTransaksi'); renderTransaksi();
+    }
+
+    function openEditCicilan(transId, cicilIdx) {
+        const t = dataTransaksi.find(item => item.id === transId);
+        document.getElementById('editTransId').value = transId;
+        document.getElementById('editCicilIdx').value = cicilIdx;
+        document.getElementById('editCicilNominal').value = t.cicilan[cicilIdx].jml;
+        document.getElementById('modalEditCicilan').style.display = 'flex';
+    }
+
+    function updateCicilan() {
+        const id = parseInt(document.getElementById('editTransId').value);
+        const cIdx = parseInt(document.getElementById('editCicilIdx').value);
+        const nominal = parseFloat(document.getElementById('editCicilNominal').value) || 0;
+        dataTransaksi[dataTransaksi.findIndex(t => t.id === id)].cicilan[cIdx].jml = nominal;
+        calculateSisa(id); saveToLocal(); closeModal('modalEditCicilan');
+        const activeTab = document.querySelector('.tab-content.active').id;
+        activeTab === 'piutang' ? renderPiutang() : renderTransaksi();
+    }
+
+    function tambahCicilan(id) {
+	const tglSekarang = new Date().toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+        const input = document.getElementById(`inputCicil-${id}`);
+        const jml = parseFloat(input.value);
+        if(!jml || jml <= 0) return alert("Nominal bayar tidak valid!");
+        dataTransaksi[dataTransaksi.findIndex(t => t.id === id)].cicilan.push({ 
+        tgl: tglSekarang, 
+        jml: jml 
+    });
+        calculateSisa(id); saveToLocal(); renderPiutang(); input.value = "";
+    }
+
+    function showTab(id) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        id === 'piutang' ? renderPiutang() : renderTransaksi();
+        updateCashFlow();
+    }
+    function resetFilter() { document.getElementById('filterGeneral').value = ""; document.getElementById('filterTanggal').value = ""; renderTransaksi(); }
+    function resetCFFilter() {
+        document.getElementById('cfTanggalMulai').value = "";
+        document.getElementById('cfTanggalSelesai').value = "";
+        document.getElementById('cfFilterAlamat').value = "";
+        updateCashFlow();
+    }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function resetForm() { document.querySelectorAll('#transaksi input, #transaksi textarea').forEach(i => i.value = ''); }
+    function hapusTransaksi(id) { if(confirm("Hapus seluruh data transaksi ini secara permanen?")) { dataTransaksi = dataTransaksi.filter(t => t.id !== id); saveToLocal(); renderTransaksi(); } }
+    function hapusCicilan(transId, idx) { if(confirm("Hapus riwayat bayar ini?")) { dataTransaksi[dataTransaksi.findIndex(t => t.id === transId)].cicilan.splice(idx,1); calculateSisa(transId); saveToLocal(); renderPiutang(); } }
+    
+    function exportData() {
+        const blob = new Blob([JSON.stringify(dataTransaksi)], { type: 'application/json' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+        a.download = `KM_Backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+    }
+    function importData(event) {
+        const reader = new FileReader();
+        reader.onload = (e) => { dataTransaksi = JSON.parse(e.target.result); saveToLocal(); renderTransaksi(); alert("Data berhasil dipulihkan!"); };
+        reader.readAsText(event.target.files[0]);
+    }
+
+    renderTransaksi();
+    updateCashFlow();
+</script>
+</body>
+</html>
