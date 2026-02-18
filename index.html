@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KangKredit v4.4 Pro</title>
+    <title>KangKredit v4.5 Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
+	<script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <style>
         input::placeholder, textarea::placeholder { font-size: 11px; opacity: 0.7; }
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
         .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
         body { font-family: 'Inter', sans-serif; }
         .custom-scroll::-webkit-scrollbar { width: 4px; }
@@ -25,7 +24,7 @@
     <div class="bg-white p-10 rounded-xl shadow-2xl w-full max-w-md text-center border border-white/20">
         <div class="bg-blue-600 w-20 h-20 rounded-xl text-white font-black text-3xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-200 italic">KK</div>
         <h2 class="text-2xl font-black text-slate-800 uppercase italic">KangKredit Pro</h2>
-        <p class="text-slate-600 text-sm mb-5 italic">Aplikasi Sales Management System</p>
+        <p class="text-slate-600 text-sm mb-5 italic">Sales Management System</p>
         <div class="space-y-4">
             <input type="password" id="pass-input" onkeypress="if(event.key === 'Enter') checkLogin()" class="w-full p-4 bg-slate-50 border-2 rounded-lg text-center font-black tracking-widest outline-none focus:border-blue-500" placeholder="••••••••">
             <button onclick="checkLogin()" class="w-full bg-blue-600 text-white py-4 rounded-lg font-black uppercase text-xs tracking-widest">Masuk ke Sistem</button>
@@ -38,15 +37,11 @@
         <div class="flex items-center gap-2">
             <div class="bg-blue-600 p-2 rounded-xl text-white font-black text-lg italic shadow-lg shadow-blue-200">KK</div>
             <div>
-                <h1 class="text-lg font-black leading-none">KangKredit <span class="text-blue-600 italic text-xs">v4.4 Pro</span></h1>
+                <h1 class="text-lg font-black leading-none text-blue-600">KangKredit <span class="text-slate-400 italic text-xs">v4.5 All-in-One</span></h1>
                 <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Sales Management System</p>
             </div>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-            <div class="flex bg-slate-100 p-1 rounded-xl gap-1">
-                <button onclick="showTab('transaksi')" class="px-3 py-1.5 bg-slate-800 text-white rounded-lg font-bold text-xs">📝 Transaksi</button>
-                <button onclick="showTab('piutang')" class="px-3 py-1.5 bg-white text-slate-800 border rounded-lg font-bold text-xs">📉 Piutang & WA</button>
-            </div>
             <button onclick="exportData()" class="px-3 py-1.5 text-slate-500 hover:text-blue-600 text-[10px] font-black uppercase">Backup</button>
             <button onclick="document.getElementById('importFile').click()" class="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest">Restore</button>
             <input type="file" id="importFile" class="hidden" onchange="importData(event)">
@@ -54,6 +49,7 @@
                 <div id="dot-status" class="w-2 h-2 rounded-full bg-slate-400"></div>
                 <span id="text-status" class="text-[9px] font-black uppercase tracking-tighter text-slate-500">Sync</span>
             </div>
+			<button onclick="exportExcelBulanan()" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition">📊 Export Excel</button>
             <button onclick="logout()" class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black uppercase">🚪 Keluar</button>
         </div>
     </header>
@@ -78,119 +74,159 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div class="bg-blue-600 p-4 rounded-2xl shadow-lg text-white"><p class="text-[9px] font-bold uppercase opacity-80 mb-1 leading-none">Omset</p><h2 id="statOmset" class="text-lg font-black tracking-tighter">Rp 0</h2></div>
-            <div class="bg-emerald-500 p-4 rounded-2xl shadow-lg text-white"><p class="text-[9px] font-bold uppercase opacity-80 mb-1 leading-none">Uang Masuk</p><h2 id="statCashIn" class="text-lg font-black tracking-tighter">Rp 0</h2></div>
-            <div class="bg-rose-500 p-4 rounded-2xl shadow-lg text-white"><p class="text-[9px] font-bold uppercase opacity-80 mb-1 leading-none">Piutang</p><h2 id="statPiutang" class="text-lg font-black tracking-tighter">Rp 0</h2></div>
+            <div class="bg-blue-600 p-4 rounded-2xl shadow-lg text-white"><p class="text-[10px] font-bold uppercase opacity-80 mb-1 leading-none">Omset</p><h2 id="statOmset" class="text-lg font-black">Rp 0</h2></div>
+            <div class="bg-emerald-500 p-4 rounded-2xl shadow-lg text-white"><p class="text-[10px] font-bold uppercase opacity-80 mb-1 leading-none">Uang Masuk</p><h2 id="statCashIn" class="text-lg font-black">Rp 0</h2></div>
+            <div class="bg-rose-500 p-4 rounded-2xl shadow-lg text-white"><p class="text-[10px] font-bold uppercase opacity-80 mb-1 leading-none">Sisa Piutang</p><h2 id="statPiutang" class="text-lg font-black">Rp 0</h2></div>
         </div>
     </div>
 
-    <div id="transaksi" class="tab-content active">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div class="lg:col-span-4">
-                <div class="bg-white rounded-xl shadow-xl border overflow-hidden sticky top-4">
-                    <div class="bg-slate-800 p-3 text-white font-black uppercase text-xs italic tracking-widest text-center">Input Penjualan Baru</div>
-                    <div class="p-6 space-y-3">
-                        <input type="text" id="pembeli" class="w-full p-3 bg-slate-50 border rounded-md text-sm outline-none" placeholder="Nama Pelanggan">
-                        <textarea id="alamat" class="w-full p-3 bg-slate-50 border rounded-md h-16 text-sm resize-none outline-none" placeholder="Alamat Lengkap"></textarea>
-                        <input type="text" id="no_hp" class="w-full p-3 bg-slate-50 border rounded-md text-sm outline-none" placeholder="WhatsApp (08xx)">
-                        <input type="text" id="barang" class="w-full p-3 bg-slate-50 border rounded-md text-sm outline-none" placeholder="Barang Utama">
-                        <div class="grid grid-cols-2 gap-3">
-                            <input type="number" id="harga" class="w-full p-3 bg-slate-50 border rounded-md font-bold text-sm" placeholder="Harga Rp">
-                            <select id="metode" onchange="updateLabelBayar()" class="w-full p-3 bg-slate-50 border rounded-md font-bold text-blue-600 text-xs cursor-pointer">
-                                <option value="Cash">💵 CASH</option>
-                                <option value="Kredit">📉 KREDIT</option>
-                            </select>
-                        </div>
-                        <div id="containerBayar" style="display: none;" class="pt-2"><input type="number" id="bayarAwal" class="w-full p-4 bg-orange-50 border rounded-md font-black text-orange-700 text-center" placeholder="Uang Muka (DP) Rp"></div>
-                        <button onclick="simpanTransaksi()" class="w-full bg-blue-600 text-white py-4 rounded-md font-black shadow-lg hover:-translate-y-1 transition-all uppercase text-xs tracking-widest">🚀 Simpan Transaksi</button>
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-4">
+            <div class="bg-white rounded-xl shadow-xl border overflow-hidden sticky top-4">
+                <div class="bg-slate-800 p-3 text-white font-black uppercase text-xs bold tracking-widest text-center">📝 Input Penjualan Baru</div>
+                <div class="p-6 space-y-3">
+                    <input type="text" id="pembeli" class="w-full p-2 bg-slate-50 border rounded-md text-sm outline-none" placeholder="Nama Pelanggan">
+                    <textarea id="alamat" class="w-full p-2 bg-slate-50 border rounded-md text-sm resize-none outline-none" placeholder="Alamat Lengkap"></textarea>
+                    <input type="text" id="no_hp" class="w-full p-2 bg-slate-50 border rounded-md text-sm outline-none" placeholder="WhatsApp (08xx)">
+                    <input type="text" id="barang" class="w-full p-2 bg-slate-50 border rounded-md text-sm outline-none" placeholder="Nama Barang">
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="number" id="harga" class="w-full p-2 bg-slate-50 border rounded-md font-bold text-sm" placeholder="Harga Rp">
+                        <select id="metode" onchange="updateLabelBayar()" class="w-full p-2 bg-slate-50 border rounded-md font-bold text-blue-600 text-xs">
+                            <option value="Cash">💵 CASH</option>
+                            <option value="Kredit">📉 KREDIT</option>
+                        </select>
                     </div>
+                    <div id="containerBayar" style="display: none;" class="pt-2"><input type="number" id="bayarAwal" class="w-full p-2 bg-orange-50 border rounded-md text-orange-700 text-center" placeholder="Uang Muka (DP) Rp"></div>
+                    <button onclick="simpanTransaksi()" class="w-full bg-blue-600 text-white py-4 rounded-md font-black shadow-lg hover:-translate-y-1 transition-all uppercase text-xs tracking-widest">🚀 Simpan Transaksi</button>
                 </div>
             </div>
+        </div>
 
-            <div class="lg:col-span-8 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
-                <div class="flex flex-col md:flex-row justify-between items-center border-b pb-4 mb-4 gap-4">
-                    <h3 class="font-black text-slate-700 uppercase text-xs tracking-widest">Histori Penjualan</h3>
-                    <div class="flex gap-2 w-full md:w-auto">
-                        <input type="text" id="filterGeneral" onkeyup="renderTransaksi()" class="p-2 bg-slate-50 rounded-xl text-xs flex-1 border outline-none" placeholder="Cari Nama/Barang...">
-                        <input type="date" id="filterTanggal" onchange="renderTransaksi()" class="p-2 bg-white rounded-xl text-[10px] border outline-none">
-                    </div>
+        <div class="lg:col-span-8 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-200">
+            <div class="flex flex-col md:flex-row justify-between items-center border-b pb-4 mb-4 gap-4">
+                <h3 class="font-black text-slate-700 uppercase text-xs tracking-widest">Daftar Transaksi & Piutang</h3>
+                <div class="flex gap-2 w-full md:w-auto">
+                    <input type="text" id="filterGeneral" onkeyup="renderTransaksi()" class="p-2 bg-slate-50 rounded-xl text-xs flex-1 border outline-none" placeholder="Cari Nama/Barang...">
+                    <input type="date" id="filterTanggal" onchange="renderTransaksi()" class="p-2 bg-white rounded-xl text-[10px] border outline-none">
                 </div>
-                <div class="overflow-x-auto custom-scroll">
-                    <table class="w-full text-left text-xs border-separate border-spacing-y-2">
-                        <thead><tr class="text-slate-400 font-bold uppercase text-[10px] tracking-widest"><th class="px-4">Tgl</th><th class="px-4">Pelanggan</th><th class="px-4">Barang</th><th class="px-4">Total</th><th class="px-4">Sisa</th><th class="px-4 text-center">Aksi</th></tr></thead>
-                        <tbody id="listTransaksi"></tbody>
-                    </table>
-                </div>
+            </div>
+            <div class="overflow-x-auto custom-scroll">
+                <table class="w-full text-left text-xs border-separate border-spacing-y-2">
+                    <thead><tr class="text-slate-400 font-bold uppercase text-[10px] tracking-widest"><th class="px-4">Tgl</th><th class="px-4">Pelanggan</th><th class="px-4">Total</th><th class="px-4">Sisa</th><th class="px-4 text-center">Aksi</th></tr></thead>
+                    <tbody id="listTransaksi"></tbody>
+                </table>
             </div>
         </div>
     </div>
+</div>
 
-    <div id="piutang" class="tab-content">
-        <div class="bg-white p-8 rounded-[2rem] shadow-sm border">
-            <h3 class="font-black text-slate-700 uppercase text-xs tracking-widest mb-8 border-b pb-4">Daftar Peiutang</h3>
-            <div id="kartuPiutangContainer" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+<div id="modalDetailPiutang" class="modal flex items-center justify-center p-4" style="display: none;">
+    <div class="bg-white p-8 rounded-[2rem] shadow-2xl w-full max-w-md border border-slate-100 max-h-[90vh] overflow-y-auto custom-scroll">
+        <div class="flex justify-between items-start border-b pb-4 mb-6">
+            <div>
+                <h3 id="detNama" class="font-black text-slate-800 uppercase text-lg leading-tight">Nama Pelanggan</h3>
+                <p id="detAlamat" class="text-[10px] text-slate-400 font-bold italic">Alamat Pelanggan</p>
+            </div>
+            <button onclick="kirimWAFromModal()" class="bg-emerald-100 p-2 rounded-xl text-emerald-600 hover:bg-emerald-600 hover:text-white transition">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.038 3.284l-.569 2.1 2.15-.565c.955.564 1.92.858 3.149.859 3.181 0 5.767-2.586 5.768-5.766.001-3.18-2.584-5.766-5.768-5.766zm3.233 8.165c-.135.381-.676.735-1.026.772-.34.037-.77.062-1.256-.098-.242-.08-.518-.179-.861-.328-1.464-.633-2.42-2.126-2.493-2.22-.074-.093-.598-.797-.598-1.518 0-.721.369-1.076.517-1.226.148-.15.32-.187.419-.187h.3c.099 0 .234-.037.357.262.136.33.468 1.141.505 1.216.037.075.062.162.012.261s-.075.163-.15.25c-.074.086-.15.15-.221.225-.087.076-.173.162-.075.337.099.175.432.714.93 1.157.643.574 1.18.751 1.353.837.173.088.272.075.37-.037.099-.113.431-.502.541-.675.111-.174.222-.149.37-.094.148.056.936.442 1.096.524.16.082.265.122.308.197.043.076.043.432-.092.813zM12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.985-1.308A9.954 9.954 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18c-1.63 0-3.15-.47-4.44-1.284l-.32-.202-2.98.783.796-2.936-.222-.353A7.957 7.957 0 014 12c0-4.411 3.589-8 8-8s8 3.589 8 8-3.589 8-8 8z"/></svg>
+            </button>
         </div>
+
+        <input type="hidden" id="modalTransId">
+        
+<div id="sectionBayar" class="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-6">
+    <div class="flex items-center gap-2">
+        <div class="relative flex-1">
+            <span class="absolute inset-y-0 left-3 flex items-center text-slate-400 font-bold text-xs">Rp</span>
+            <input type="number" id="modalInputBayar" 
+                class="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:border-emerald-500 font-bold text-sm transition-all" 
+                placeholder="0">
+        </div>
+        <button onclick="tambahCicilanModal()" 
+            class="bg-emerald-500 text-white px-5 py-2 rounded-xl font-black text-xs hover:bg-emerald-600 active:scale-95 transition-all shadow-sm">
+            Cicil
+        </button>
+    </div>
+</div>
+
+        <div>
+            <label class="text-[10px] font-black text-slate-400 uppercase mb-3 block tracking-widest">Riwayat Cicilan</label>
+            <div id="modalRiwayatContainer" class="space-y-2 mb-6">
+                </div>
+        </div>
+
+<div class="flex justify-between items-center pt-3 border-t">
+    <button onclick="closeModal('modalDetailPiutang')" 
+        class="px-4 py-2 bg-slate-100 text-slate-500 rounded-xl text-[10px] uppercase tracking-wider hover:bg-slate-200 active:scale-95 transition-all shadow-sm">
+        Tutup
+    </button>
+    <div class="text-right">
+        <p class="text-[8px] text-slate-400 uppercase leading-none">Sisa Tagihan</p>
+        <p id="detSisa" class="text-base font-black text-rose-600 leading-tight">Rp 0</p>
+    </div>
+</div>
     </div>
 </div>
 
 <div id="modalEditTransaksi" class="modal flex items-center justify-center p-4" style="display: none;">
     <div class="bg-white p-8 rounded-[2rem] shadow-2xl w-full max-w-md border border-slate-100">
-        <h3 class="font-black text-slate-800 uppercase text-sm border-b pb-4 mb-6">✏️ Edit & Tambah Barang</h3>
+        <h3 class="font-black text-slate-800 uppercase text-sm border-b pb-4 mb-6">✏️ Edit Data & Barang</h3>
         <input type="hidden" id="editMainTransId">
         <div class="space-y-4">
-            <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Nama Pembeli</label>
-                <input type="text" id="editMainPembeli" class="w-full p-3 border rounded-2xl bg-slate-50 text-sm outline-none" placeholder="Nama">
-            </div>
-            
+            <input type="text" id="editMainPembeli" class="w-full p-3 border rounded-2xl bg-slate-50 text-sm outline-none" placeholder="Nama">
             <div class="bg-blue-50 p-4 rounded-3xl border border-blue-100">
-                <label class="text-[10px] font-black text-blue-600 uppercase mb-2 block tracking-widest">Daftar Barang</label>
                 <div id="listBarangEdit" class="space-y-2 mb-3 max-h-40 overflow-y-auto custom-scroll"></div>
                 <div class="flex gap-2 border-t pt-3 border-blue-200 mt-2">
-                    <input type="text" id="newBarangNama" class="flex-1 p-2 text-xs border rounded-xl outline-none" placeholder="Tambah Barang">
-                    <input type="number" id="newBarangHarga" class="w-24 p-2 text-xs border rounded-xl outline-none font-bold" placeholder="Harga">
+                    <input type="text" id="newBarangNama" class="flex-1 p-2 text-xs border rounded-xl" placeholder="Tambah Barang">
+                    <input type="number" id="newBarangHarga" class="w-24 p-2 text-xs border rounded-xl" placeholder="Harga">
                     <button onclick="tambahBarangKeDaftar()" class="bg-blue-600 text-white px-3 rounded-xl font-black">+</button>
                 </div>
             </div>
-            
             <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1">No WhatsApp</label>
-                    <input type="text" id="editMainNoHp" class="w-full p-3 border rounded-2xl bg-slate-50 text-sm outline-none" placeholder="WhatsApp">
-                </div>
-                <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Harga Total</label>
-                    <input type="number" id="editMainHarga" class="w-full p-3 border rounded-2xl bg-slate-200 font-black text-blue-600 text-sm outline-none" readonly>
-                </div>
+                <input type="text" id="editMainNoHp" class="w-full p-3 border rounded-2xl bg-slate-50 text-sm outline-none">
+                <input type="number" id="editMainHarga" class="w-full p-3 border rounded-2xl bg-slate-200 font-black text-blue-600 text-sm outline-none" readonly>
             </div>
-            
-            <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Alamat</label>
-                <textarea id="editMainAlamat" class="w-full p-3 border rounded-2xl bg-slate-50 h-16 resize-none text-sm outline-none" placeholder="Alamat"></textarea>
-            </div>
+            <textarea id="editMainAlamat" class="w-full p-3 border rounded-2xl bg-slate-50 h-16 resize-none text-sm outline-none"></textarea>
         </div>
-        
         <div class="flex justify-end gap-3 mt-8 pt-4 border-t">
             <button onclick="closeModal('modalEditTransaksi')" class="px-6 py-2.5 bg-slate-100 rounded-2xl font-bold text-sm">Batal</button>
-            <button onclick="updateTransaksiUtama()" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-blue-200">Simpan Perubahan</button>
+            <button onclick="updateTransaksiUtama()" class="px-6 py-2.5 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-lg">Update</button>
         </div>
     </div>
 </div>
 
-<div id="modalEditCicilan" class="modal flex items-center justify-center p-4" style="display: none;">
-    <div class="bg-white p-8 rounded-[2rem] shadow-2xl w-full max-w-sm">
-        <h3 class="font-black text-emerald-800 uppercase text-sm border-b pb-4 mb-6 text-center">✏️ Edit Nominal Bayar</h3>
+<div id="modalEditCicilan" class="modal flex items-center justify-center p-4" style="display: none; z-index: 70;">
+    <div class="bg-white p-6 rounded-[2.5rem] shadow-2xl w-full max-w-[280px] border border-slate-50 relative">
+        <div class="flex items-center gap-2 mb-4 justify-center">
+            <div class="bg-emerald-100 p-1.5 rounded-lg text-emerald-600">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            </div>
+            <h3 class="font-black text-slate-700 uppercase text-[10px] tracking-widest">Ubah Nominal</h3>
+        </div>
+
         <input type="hidden" id="editTransId"><input type="hidden" id="editCicilIdx">
-        <input type="number" id="editCicilNominal" class="w-full p-5 border rounded-2xl bg-slate-50 text-2xl font-black text-center text-emerald-600 outline-none">
-        <div class="flex justify-end gap-3 mt-8">
-            <button onclick="closeModal('modalEditCicilan')" class="px-6 py-2.5 bg-slate-100 rounded-2xl font-bold">Batal</button>
-            <button onclick="updateCicilan()" class="px-6 py-2.5 bg-emerald-600 text-white rounded-2xl font-black shadow-lg">Simpan</button>
+        
+        <div class="relative mb-5">
+            <span class="absolute inset-y-0 left-4 flex items-center text-slate-400 text-xs">Rp</span>
+            <input type="number" id="editCicilNominal" 
+                class="w-full pl-10 pr-4 py-4 bg-slate-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 text-xl font-black text-emerald-600 text-center shadow-inner">
+        </div>
+
+        <div class="flex gap-2">
+            <button onclick="closeModal('modalEditCicilan')" 
+                class="flex-1 py-3 bg-slate-100 text-slate-400 rounded-2xl font-black text-[10px] uppercase hover:bg-slate-200 transition-all">
+                Batal
+            </button>
+            <button onclick="updateCicilan()" 
+                class="flex-1 py-3 bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase shadow-md shadow-emerald-200 active:scale-95 transition-all">
+                Simpan
+            </button>
         </div>
     </div>
 </div>
 
 <script>
-// 1. LOGIN & SECURITY
+// --- DB & AUTH ---
 const MASTER_PASSWORD = "kreditku";
 function checkLogin() {
     if (document.getElementById('pass-input').value === MASTER_PASSWORD) {
@@ -199,9 +235,8 @@ function checkLogin() {
     } else { alert("Password Salah!"); }
 }
 function logout() { sessionStorage.removeItem('kk_akses'); location.reload(); }
-(function() { if (sessionStorage.getItem('kk_akses') === 'aktif') { if(document.getElementById('login-page')) document.getElementById('login-page').style.display = 'none'; } })();
+(function() { if (sessionStorage.getItem('kk_akses') === 'aktif') document.getElementById('login-page').style.display = 'none'; })();
 
-// 2. DATABASE CONFIG
 const firebaseConfig = { databaseURL: "https://bus-managemen-5fca8-default-rtdb.asia-southeast1.firebasedatabase.app/", projectId: "bus-managemen-5fca8" };
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
@@ -214,70 +249,7 @@ function saveToLocal() {
     updateCashFlow();
 }
 
-// 3. MULTI-ITEM LOGIC
-function renderListBarangEdit(daftar) {
-    const container = document.getElementById('listBarangEdit');
-    if(!container) return;
-    container.innerHTML = (daftar || []).map((b, idx) => `
-        <div class="flex justify-between items-center bg-white p-2 rounded-xl border border-blue-100">
-            <div class="flex flex-col">
-                <span class="text-[11px] font-bold text-slate-700">${b.nama}</span>
-                <span class="text-[10px] text-blue-600">Rp ${b.harga.toLocaleString('id-ID')}</span>
-            </div>
-            <button onclick="hapusBarangDariDaftar(${idx})" class="text-rose-500 font-black px-2 hover:bg-rose-50 rounded-lg">×</button>
-        </div>
-    `).join('');
-}
-
-function openEditTransaksi(id) {
-    const t = dataTransaksi.find(item => item.id === id);
-    if(!t) return;
-    document.getElementById('editMainTransId').value = t.id;
-    document.getElementById('editMainPembeli').value = t.pembeli || '';
-    document.getElementById('editMainNoHp').value = t.no_hp || '';
-    document.getElementById('editMainAlamat').value = t.alamat || '';
-    document.getElementById('editMainHarga').value = t.harga || 0;
-    
-    if(!t.daftarBarang) t.daftarBarang = [{ nama: t.barang, harga: t.harga }];
-    
-    renderListBarangEdit(t.daftarBarang);
-    document.getElementById('modalEditTransaksi').style.display = 'flex';
-}
-
-function tambahBarangKeDaftar() {
-    const id = parseInt(document.getElementById('editMainTransId').value);
-    const nama = document.getElementById('newBarangNama').value;
-    const harga = parseFloat(document.getElementById('newBarangHarga').value);
-    if(!nama || !harga) return alert("Isi nama & harga!");
-    
-    const idx = dataTransaksi.findIndex(t => t.id === id);
-    if(!dataTransaksi[idx].daftarBarang) dataTransaksi[idx].daftarBarang = [{ nama: dataTransaksi[idx].barang, harga: dataTransaksi[idx].harga }];
-    
-    dataTransaksi[idx].daftarBarang.push({ nama, harga });
-    dataTransaksi[idx].harga = dataTransaksi[idx].daftarBarang.reduce((sum, b) => sum + (parseFloat(b.harga)||0), 0);
-    dataTransaksi[idx].barang = dataTransaksi[idx].daftarBarang.map(b => b.nama).join(', ');
-    
-    document.getElementById('editMainHarga').value = dataTransaksi[idx].harga;
-    document.getElementById('newBarangNama').value = ""; 
-    document.getElementById('newBarangHarga').value = "";
-    renderListBarangEdit(dataTransaksi[idx].daftarBarang);
-    calculateSisa(id);
-}
-
-function hapusBarangDariDaftar(barangIdx) {
-    const id = parseInt(document.getElementById('editMainTransId').value);
-    const transIdx = dataTransaksi.findIndex(t => t.id === id);
-    if(confirm("Hapus barang dari daftar?")) {
-        dataTransaksi[transIdx].daftarBarang.splice(barangIdx, 1);
-        dataTransaksi[transIdx].harga = dataTransaksi[transIdx].daftarBarang.reduce((sum, b) => sum + (parseFloat(b.harga)||0), 0);
-        dataTransaksi[transIdx].barang = dataTransaksi[transIdx].daftarBarang.map(b => b.nama).join(', ');
-        document.getElementById('editMainHarga').value = dataTransaksi[transIdx].harga;
-        renderListBarangEdit(dataTransaksi[transIdx].daftarBarang);
-        calculateSisa(id);
-    }
-}
-
-// 4. CORE ENGINE
+// --- CORE ENGINE ---
 function calculateSisa(id) {
     const idx = dataTransaksi.findIndex(t => t.id === id);
     if(idx===-1) return;
@@ -292,13 +264,19 @@ function simpanTransaksi() {
     const harga = parseFloat(document.getElementById('harga').value) || 0;
     const bayarAwal = parseFloat(document.getElementById('bayarAwal').value) || 0;
     const tgl = new Date();
-    if(!pembeli || !barang || harga <= 0) return alert("Lengkapi data!");
+
+    // Validasi input
+    if(!pembeli || !barang || harga <= 0) {
+        return alert("Mohon lengkapi data Nama, Barang, dan Harga!");
+    }
     
     const baru = {
         id: Date.now(),
         tanggal: tgl.toISOString().split('T')[0],
         tglDisplay: tgl.toLocaleDateString('id-ID', {day:'2-digit',month:'2-digit',year:'numeric'}),
-        pembeli, barang, harga,
+        pembeli, 
+        barang, 
+        harga,
         no_hp: document.getElementById('no_hp').value,
         alamat: document.getElementById('alamat').value,
         metode: document.getElementById('metode').value,
@@ -306,19 +284,22 @@ function simpanTransaksi() {
         status: "Kredit",
         cicilan: [{ tgl: tgl.toLocaleDateString('id-ID', {day:'2-digit',month:'2-digit',year:'numeric'}), jml: bayarAwal }]
     };
+
+    // Simpan data
     dataTransaksi.push(baru); 
     calculateSisa(baru.id); 
     saveToLocal(); 
     renderTransaksi(); 
-    resetForm();
-    alert("Berhasil Disimpan!");
+
+    // --- PERBAIKAN DI SINI ---
+    alert("🚀 Transaksi Berhasil Disimpan!"); // Notifikasi Berhasil
+    resetForm(); // Bersihkan Kolom Input
 }
 
 function renderTransaksi() {
     const fText = document.getElementById('filterGeneral').value.toLowerCase();
     const fDate = document.getElementById('filterTanggal').value;
     const container = document.getElementById('listTransaksi');
-    if(!container) return;
     
     const filtered = dataTransaksi.filter(t => {
         const mText = (t.pembeli || "").toLowerCase().includes(fText) || (t.barang || "").toLowerCase().includes(fText) || (t.alamat || "").toLowerCase().includes(fText);
@@ -328,82 +309,161 @@ function renderTransaksi() {
 
     container.innerHTML = filtered.slice().reverse().map(t => `
         <tr class="bg-white hover:bg-slate-50 transition shadow-sm">
-            <td class="px-4 py-4 font-bold text-slate-500">${t.tglDisplay}</td>
+            <td class="px-4 py-4 font-bold text-slate-400">${t.tglDisplay}</td>
             <td class="px-4 py-4">
                 <div class="font-black uppercase text-slate-800">${t.pembeli}</div>
-                <div class="text-[10px] text-blue-600 font-bold">${t.no_hp || '-'}</div>
                 <div class="text-[9px] text-slate-400 italic">${t.alamat || '-'}</div>
             </td>
-            <td class="px-4 py-4 text-xs font-bold text-slate-600">${t.barang}</td>
-            <td class="px-4 py-4 font-black">Rp ${(t.harga||0).toLocaleString()}</td>
+            <td class="px-4 py-4 font-black">Rp ${t.harga.toLocaleString()}</td>
             <td class="px-4 py-4">
-                <div class="font-black ${(t.sisa||0) > 0 ? 'text-rose-600' : 'text-emerald-600'}">Rp ${(t.sisa||0).toLocaleString()}</div>
-                <div class="text-[9px] font-black uppercase px-2 py-0.5 rounded-full inline-block ${t.status === 'Lunas' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}">${t.status}</div>
+                <div class="font-black ${t.sisa > 0 ? 'text-rose-600' : 'text-emerald-600'}">Rp ${t.sisa.toLocaleString()}</div>
+                <div class="text-[8px] font-black uppercase px-2 py-0.5 rounded-full inline-block ${t.status === 'Lunas' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}">${t.status}</div>
             </td>
             <td class="px-4 py-4 text-center">
-                <button onclick="openEditTransaksi(${t.id})" class="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition">✏️</button>
-                <button onclick="hapusTransaksi(${t.id})" class="p-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-500 hover:text-white transition">🗑️</button>
+                <div class="flex justify-center gap-1.5">
+                    <button onclick="openModalDetail(${t.id})" class="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition" title="Piutang & Bayar">📉</button>
+                    <button onclick="openEditTransaksi(${t.id})" class="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition" title="Edit Data">✏️</button>
+                    <button onclick="hapusTransaksi(${t.id})" class="p-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-600 hover:text-white transition">🗑️</button>
+                </div>
             </td>
         </tr>
     `).join('');
 }
 
-function renderPiutang() {
-    const container = document.getElementById('kartuPiutangContainer');
-    if(!container) return;
-    const piutang = dataTransaksi.filter(t => t.metode === 'Kredit' && t.status === 'Kredit');
-    if(!piutang.length) return container.innerHTML = "<p class='col-span-full text-center text-slate-400 py-10 italic'>Tidak ada piutang aktif.</p>";
+// --- MODAL DETAIL & PIUTANG LOGIC ---
+function openModalDetail(id) {
+    const t = dataTransaksi.find(x => x.id === id);
+    if(!t) return;
     
-    container.innerHTML = piutang.map(t => `
-        <div class="bg-white border-t-4 border-rose-500 p-4 rounded-xl shadow-sm">
-            <div class="flex justify-between items-start mb-1">
-                <h4 class="font-black text-slate-800 uppercase text-sm truncate pr-2">${t.pembeli}</h4>
-                <button onclick="kirimWA(${t.id})" class="hover:scale-110 transition-transform">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path fill-rule="evenodd" clip-rule="evenodd" d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 13.8214 2.48697 15.5291 3.3379 17L2 22L7.1553 20.7093C8.58687 21.5367 10.2404 22 12 22ZM15.9324 14.5056C15.7533 14.4172 14.8732 13.9877 14.7088 13.9288C14.5444 13.8698 14.4251 13.8404 14.3057 14.0171C14.1864 14.1938 13.843 14.5915 13.7385 14.7094C13.634 14.8272 13.5296 14.842 13.3506 14.7535C13.1715 14.6651 12.5937 14.4752 11.9096 13.8658C11.377 13.3913 11.0184 12.8055 10.914 12.6288C10.8095 12.452 10.9032 12.3564 10.9926 12.2682C11.0728 12.189 11.171 12.06 11.2605 11.9569C11.35 11.8539 11.3798 11.7802 11.4395 11.6624C11.4991 11.5446 11.4693 11.4415 11.4246 11.3531C11.3798 11.2647 11.0366 10.4252 10.8874 10.0718C10.7419 9.72756 10.595 9.77491 10.4842 9.77491C10.3793 9.77491 10.2599 9.76018 10.1406 9.76018C10.0212 9.76018 9.82725 9.80436 9.6631 9.9811C9.49896 10.1578 9.0364 10.5849 9.0364 11.4539C9.0364 12.3229 9.67803 13.1624 9.76756 13.2802C9.85709 13.398 11.0303 15.2096 12.8333 15.9872C13.2624 16.1722 13.5932 16.2813 13.854 16.3644C14.2847 16.5012 14.6766 16.4812 14.9863 16.4351C15.3316 16.3835 16.0504 15.9984 16.2 15.5713C16.1496 15.1441 16.1496 14.776 16.1048 14.7024C16.0599 14.6288 15.9406 14.5994 15.9324 14.5056Z" fill="#25D366"/>
-                    </svg>
-                </button>
+    document.getElementById('modalTransId').value = t.id;
+    document.getElementById('detNama').innerText = t.pembeli;
+    document.getElementById('detAlamat').innerText = t.alamat || 'Alamat tidak diisi';
+    document.getElementById('detSisa').innerText = `Rp ${t.sisa.toLocaleString()}`;
+    
+    // Tampilkan riwayat
+    renderRiwayatModal(t.cicilan, t.id);
+    
+    // Sembunyikan input bayar jika sudah lunas
+    document.getElementById('sectionBayar').style.display = t.sisa <= 0 ? 'none' : 'block';
+    
+    document.getElementById('modalDetailPiutang').style.display = 'flex';
+}
+
+function renderRiwayatModal(cicilan, transId) {
+    const container = document.getElementById('modalRiwayatContainer');
+    if(!cicilan || cicilan.length === 0) {
+        container.innerHTML = "<p class='text-center text-slate-300 py-4 italic text-xs'>Belum ada riwayat bayar.</p>";
+        return;
+    }
+    
+    container.innerHTML = cicilan.map((c, i) => `
+        <div class="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border border-slate-100">
+            <div>
+                <p class="text-[10px] text-slate-400 font-bold">${c.tgl}</p>
+                <p class="font-black text-slate-700">Rp ${c.jml.toLocaleString()}</p>
             </div>
-            <p class="text-[10px] text-slate-400 font-bold uppercase truncate mb-3">${t.barang}</p>
-            <div class="bg-slate-50 p-2 rounded-xl mb-3">
-                <p class="text-[9px] font-black text-slate-400 uppercase">Sisa Piutang</p>
-                <div class="text-base font-black text-rose-600">Rp ${(t.sisa||0).toLocaleString('id-ID')}</div>
+            <div class="flex gap-2">
+                <button onclick="openEditCicilan(${transId}, ${i})" class="text-blue-400 hover:text-blue-600 text-sm">✏️</button>
+                <button onclick="hapusCicilan(${transId}, ${i})" class="text-rose-400 hover:text-rose-600 text-sm">🗑️</button>
             </div>
-            <div class="flex gap-1.5 mb-3">
-                <input type="number" id="in-${t.id}" class="w-full p-2 bg-slate-50 border rounded-lg text-xs outline-none focus:border-emerald-500 font-bold" placeholder="Bayar Rp">
-                <button onclick="tambahCicilan(${t.id})" class="bg-emerald-500 text-white px-3 py-2 rounded-lg font-black text-[10px] hover:bg-emerald-600">Cicil</button>
-            </div>
-            <details class="text-[9px]">
-                <summary class="font-bold text-slate-400 uppercase cursor-pointer py-1 bg-slate-50 rounded text-center list-none">Riwayat Bayar ▼</summary>
-                <div class="mt-2 space-y-1 max-h-24 overflow-y-auto custom-scroll">
-                    ${(t.cicilan || []).map((c, i) => `
-                        <div class="flex justify-between border-b border-slate-50 py-1">
-                            <span>${c.tgl}</span>
-                            <span class="font-bold">Rp ${(c.jml||0).toLocaleString()}</span>
-                            <div class="flex gap-1">
-                                <button onclick="openEditCicilan(${t.id}, ${i})" class="text-blue-400">✏️</button>
-                                <button onclick="hapusCicilan(${t.id}, ${i})" class="text-rose-400">🗑️</button>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </details>
         </div>
     `).join('');
 }
 
-// 5. HELPER FUNCTIONS
-function tambahCicilan(id) {
-    const input = document.getElementById(`in-${id}`);
+function tambahCicilanModal() {
+    const id = parseInt(document.getElementById('modalTransId').value);
+    const input = document.getElementById('modalInputBayar');
     const jml = parseFloat(input.value);
+    
     if(!jml || jml <= 0) return alert("Nominal tidak valid!");
+    
     const idx = dataTransaksi.findIndex(t => t.id === id);
-    if(idx===-1) return;
     if(!dataTransaksi[idx].cicilan) dataTransaksi[idx].cicilan = [];
-    dataTransaksi[idx].cicilan.push({ tgl: new Date().toLocaleDateString('id-ID', {day:'2-digit',month:'2-digit',year:'numeric'}), jml });
-    calculateSisa(id); saveToLocal(); renderPiutang(); input.value = "";
+    
+    dataTransaksi[idx].cicilan.push({ 
+        tgl: new Date().toLocaleDateString('id-ID', {day:'2-digit',month:'2-digit',year:'numeric'}), 
+        jml 
+    });
+    
+    calculateSisa(id);
+    saveToLocal();
+    input.value = "";
+    
+    // Refresh modal
+    const t = dataTransaksi[idx];
+    document.getElementById('detSisa').innerText = `Rp ${t.sisa.toLocaleString()}`;
+    renderRiwayatModal(t.cicilan, t.id);
+    renderTransaksi();
+    if(t.sisa <= 0) document.getElementById('sectionBayar').style.display = 'none';
 }
 
+function kirimWAFromModal() {
+    const id = parseInt(document.getElementById('modalTransId').value);
+    kirimWA(id);
+}
+
+// --- FUNGSI EDIT DATA & BARANG ---
+function renderListBarangEdit(daftar) {
+    const container = document.getElementById('listBarangEdit');
+    container.innerHTML = (daftar || []).map((b, idx) => `
+        <div class="flex justify-between items-center bg-white p-2 rounded-xl border border-blue-100">
+            <div class="flex flex-col"><span class="text-[11px] font-bold">${b.nama}</span><span class="text-[10px] text-blue-600">Rp ${b.harga.toLocaleString()}</span></div>
+            <button onclick="hapusBarangDariDaftar(${idx})" class="text-rose-500 font-black px-2 hover:bg-rose-50 rounded-lg">×</button>
+        </div>
+    `).join('');
+}
+
+function openEditTransaksi(id) {
+    const t = dataTransaksi.find(item => item.id === id);
+    document.getElementById('editMainTransId').value = t.id;
+    document.getElementById('editMainPembeli').value = t.pembeli;
+    document.getElementById('editMainNoHp').value = t.no_hp || '';
+    document.getElementById('editMainAlamat').value = t.alamat || '';
+    document.getElementById('editMainHarga').value = t.harga;
+    if(!t.daftarBarang) t.daftarBarang = [{ nama: t.barang, harga: t.harga }];
+    renderListBarangEdit(t.daftarBarang);
+    document.getElementById('modalEditTransaksi').style.display = 'flex';
+}
+
+function tambahBarangKeDaftar() {
+    const id = parseInt(document.getElementById('editMainTransId').value);
+    const nama = document.getElementById('newBarangNama').value;
+    const harga = parseFloat(document.getElementById('newBarangHarga').value);
+    if(!nama || !harga) return alert("Isi data!");
+    const idx = dataTransaksi.findIndex(t => t.id === id);
+    if(!dataTransaksi[idx].daftarBarang) dataTransaksi[idx].daftarBarang = [{ nama: dataTransaksi[idx].barang, harga: dataTransaksi[idx].harga }];
+    dataTransaksi[idx].daftarBarang.push({ nama, harga });
+    dataTransaksi[idx].harga = dataTransaksi[idx].daftarBarang.reduce((sum, b) => sum + (parseFloat(b.harga)||0), 0);
+    dataTransaksi[idx].barang = dataTransaksi[idx].daftarBarang.map(b => b.nama).join(', ');
+    document.getElementById('editMainHarga').value = dataTransaksi[idx].harga;
+    document.getElementById('newBarangNama').value = ""; document.getElementById('newBarangHarga').value = "";
+    renderListBarangEdit(dataTransaksi[idx].daftarBarang);
+    calculateSisa(id);
+}
+
+function hapusBarangDariDaftar(barangIdx) {
+    const id = parseInt(document.getElementById('editMainTransId').value);
+    const transIdx = dataTransaksi.findIndex(t => t.id === id);
+    if(confirm("Hapus barang?")) {
+        dataTransaksi[transIdx].daftarBarang.splice(barangIdx, 1);
+        dataTransaksi[transIdx].harga = dataTransaksi[transIdx].daftarBarang.reduce((sum, b) => sum + (parseFloat(b.harga)||0), 0);
+        dataTransaksi[transIdx].barang = dataTransaksi[transIdx].daftarBarang.map(b => b.nama).join(', ');
+        document.getElementById('editMainHarga').value = dataTransaksi[transIdx].harga;
+        renderListBarangEdit(dataTransaksi[transIdx].daftarBarang);
+        calculateSisa(id);
+    }
+}
+
+function updateTransaksiUtama() {
+    const id = parseInt(document.getElementById('editMainTransId').value);
+    const idx = dataTransaksi.findIndex(t => t.id === id);
+    dataTransaksi[idx].pembeli = document.getElementById('editMainPembeli').value;
+    dataTransaksi[idx].no_hp = document.getElementById('editMainNoHp').value;
+    dataTransaksi[idx].alamat = document.getElementById('editMainAlamat').value;
+    calculateSisa(id); saveToLocal(); closeModal('modalEditTransaksi'); renderTransaksi();
+}
+
+// --- CICILAN EDIT (MODAL KECIL) ---
 function openEditCicilan(id, idx) {
     const t = dataTransaksi.find(x => x.id === id);
     document.getElementById('editTransId').value = id; 
@@ -411,26 +471,25 @@ function openEditCicilan(id, idx) {
     document.getElementById('editCicilNominal').value = t.cicilan[idx].jml;
     document.getElementById('modalEditCicilan').style.display = 'flex';
 }
-
 function updateCicilan() {
     const id = parseInt(document.getElementById('editTransId').value);
     const idx = parseInt(document.getElementById('editCicilIdx').value);
     const val = parseFloat(document.getElementById('editCicilNominal').value) || 0;
     const tIdx = dataTransaksi.findIndex(t => t.id === id);
-    if(tIdx !== -1) {
-        dataTransaksi[tIdx].cicilan[idx].jml = val;
-        calculateSisa(id); saveToLocal(); closeModal('modalEditCicilan'); renderPiutang();
-    }
+    dataTransaksi[tIdx].cicilan[idx].jml = val;
+    calculateSisa(id); saveToLocal(); closeModal('modalEditCicilan');
+    openModalDetail(id); // refresh modal detail
 }
-
 function hapusCicilan(id, idx) {
     if(confirm("Hapus riwayat bayar?")) {
         const tIdx = dataTransaksi.findIndex(t => t.id === id);
         dataTransaksi[tIdx].cicilan.splice(idx,1);
-        calculateSisa(id); saveToLocal(); renderPiutang();
+        calculateSisa(id); saveToLocal(); renderTransaksi();
+        openModalDetail(id); // refresh modal detail
     }
 }
 
+// --- HELPERS ---
 function kirimWA(id) {
     const t = dataTransaksi.find(x => x.id === id);
     if (!t) return;
@@ -480,23 +539,6 @@ function kirimWA(id) {
     window.open(`https://wa.me/${no}?text=${msg}`, '_blank');
 }
 
-function exportData() {
-    const blob = new Blob([JSON.stringify(dataTransaksi)], { type: 'application/json' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `Backup_${new Date().toISOString().split('T')[0]}.json`; a.click();
-}
-
-function importData(e) {
-    const reader = new FileReader();
-    reader.onload = (x) => {
-        try {
-            const data = JSON.parse(x.target.result);
-            if(Array.isArray(data)) { dataTransaksi = data; saveToLocal(); renderTransaksi(); updateCashFlow(); alert("Restore Berhasil!"); }
-        } catch(err) { alert("File tidak valid!"); }
-    };
-    reader.readAsText(e.target.files[0]); e.target.value = '';
-}
-
 function updateCashFlow() {
     const tMulai = document.getElementById('cfTanggalMulai').value;
     const tSelesai = document.getElementById('cfTanggalSelesai').value;
@@ -506,8 +548,6 @@ function updateCashFlow() {
     dataTransaksi.forEach(t => {
         let matchTgl = true;
         if (tMulai && tSelesai) matchTgl = t.tanggal >= tMulai && t.tanggal <= tSelesai;
-        else if (tMulai) matchTgl = t.tanggal >= tMulai;
-        else if (tSelesai) matchTgl = t.tanggal <= tSelesai;
         const matchAlamat = fAlamat === "" || (t.alamat && t.alamat.toLowerCase().includes(fAlamat));
         if (matchTgl && matchAlamat) {
             omset += (t.harga || 0); piutang += (t.sisa || 0);
@@ -519,55 +559,62 @@ function updateCashFlow() {
     document.getElementById('statPiutang').innerText = "Rp " + piutang.toLocaleString('id-ID');
 }
 
+function exportData() {
+    // 1. Ambil waktu sekarang
+    const sekarang = new Date();
+    
+    // 2. Susun format (tgl-bln-thn-jam-menit-detik)
+    const tgl = sekarang.getDate().toString().padStart(2, '0');
+    const bln = (sekarang.getMonth() + 1).toString().padStart(2, '0');
+    const thn = sekarang.getFullYear().toString().slice(-2); // Ambil 2 angka belakang tahun (26)
+    const jam = sekarang.getHours().toString().padStart(2, '0');
+    const mnt = sekarang.getMinutes().toString().padStart(2, '0');
+    const dtk = sekarang.getSeconds().toString().padStart(2, '0');
+
+    // Nama file: kk_190226053500.json
+    const namaFile = `kk_${tgl}${bln}${thn}${jam}${mnt}${dtk}`;
+
+    // 3. Proses download
+    const blob = new Blob([JSON.stringify(dataTransaksi)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${namaFile}.json`;
+    a.click();
+    
+    // Bersihkan URL blob
+    URL.revokeObjectURL(a.href);
+}
+
+function importData(e) {
+    const reader = new FileReader();
+    reader.onload = (x) => {
+        dataTransaksi = JSON.parse(x.target.result);
+        saveToLocal(); renderTransaksi(); updateCashFlow(); alert("Restore Berhasil!");
+    };
+    reader.readAsText(e.target.files[0]);
+}
 function resetCFFilter() {
-    document.getElementById('cfTanggalMulai').value = ""; 
-    document.getElementById('cfTanggalSelesai').value = "";
-    document.getElementById('cfFilterAlamat').value = ""; 
-    updateCashFlow();
+    document.getElementById('cfTanggalMulai').value = ""; document.getElementById('cfTanggalSelesai').value = "";
+    document.getElementById('cfFilterAlamat').value = ""; updateCashFlow();
 }
-
-// FUNGSI UPDATE UTAMA (SUDAH DIPERBAIKI)
-function updateTransaksiUtama() {
-    const id = parseInt(document.getElementById('editMainTransId').value);
-    const idx = dataTransaksi.findIndex(t => t.id === id);
-    if(idx !== -1) {
-        dataTransaksi[idx].pembeli = document.getElementById('editMainPembeli').value;
-        dataTransaksi[idx].no_hp = document.getElementById('editMainNoHp').value;
-        dataTransaksi[idx].alamat = document.getElementById('editMainAlamat').value;
-        
-        // Harga dan Nama Barang sudah diupdate otomatis di fungsi tambahBarangKeDaftar
-        calculateSisa(id); 
-        saveToLocal(); 
-        closeModal('modalEditTransaksi'); 
-        renderTransaksi();
-        if(document.getElementById('piutang').classList.contains('active')) renderPiutang();
-    }
-}
-
-function showTab(id) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    if(id === 'piutang') renderPiutang(); else renderTransaksi();
-}
-
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
 function resetForm() { 
-    document.querySelectorAll('#transaksi input, #transaksi textarea').forEach(i => i.value = ''); 
+    // Mengosongkan semua input teks, textarea, dan angka
+    document.getElementById('pembeli').value = '';
+    document.getElementById('alamat').value = '';
+    document.getElementById('no_hp').value = '';
+    document.getElementById('barang').value = '';
+    document.getElementById('harga').value = '';
+    document.getElementById('bayarAwal').value = '';
+    
+    // Kembalikan metode ke Cash dan sembunyikan kolom DP
+    document.getElementById('metode').value = 'Cash';
     updateLabelBayar(); 
 }
 
-function hapusTransaksi(id) { 
-    if(confirm("Hapus permanen transaksi ini?")) { 
-        dataTransaksi = dataTransaksi.filter(t => t.id!==id); 
-        saveToLocal(); 
-        renderTransaksi(); 
-    } 
-}
 
-function updateLabelBayar() { 
-    document.getElementById('containerBayar').style.display = document.getElementById('metode').value === 'Kredit' ? 'block' : 'none'; 
-}
+function hapusTransaksi(id) { if(confirm("Hapus total?")) { dataTransaksi = dataTransaksi.filter(t => t.id!==id); saveToLocal(); renderTransaksi(); } }
+function updateLabelBayar() { document.getElementById('containerBayar').style.display = document.getElementById('metode').value === 'Kredit' ? 'block' : 'none'; }
 
 function updateStatus(is) {
     const dot = document.getElementById('dot-status'), txt = document.getElementById('text-status');
@@ -575,24 +622,115 @@ function updateStatus(is) {
     dot.className = is ? "w-2 h-2 rounded-full bg-emerald-500 shadow-lg" : "w-2 h-2 rounded-full bg-rose-500";
     txt.innerText = is ? "Online" : "Offline";
 }
-
 db.ref(".info/connected").on("value", (s) => updateStatus(s.val() === true));
-dbRef.on("value", (s) => { 
-    if(s.val()) { 
-        dataTransaksi = Object.values(s.val()); 
-        renderTransaksi(); 
-        updateCashFlow(); 
-        if(document.getElementById('piutang').classList.contains('active')) renderPiutang(); 
-    } 
-});
+dbRef.on("value", (s) => { if(s.val()) { dataTransaksi = Object.values(s.val()); renderTransaksi(); updateCashFlow(); } });
 
 window.onload = () => { 
-    closeModal('modalEditTransaksi');
-    closeModal('modalEditCicilan');
-    renderTransaksi(); 
-    updateCashFlow(); 
+    closeModal('modalEditTransaksi'); closeModal('modalEditCicilan'); closeModal('modalDetailPiutang');
+    renderTransaksi(); updateCashFlow(); 
 };
+
+// Buka Modal Pilihan
+function exportExcelBulanan() {
+    document.getElementById('modalPilihBulan').style.display = 'flex';
+}
+
+function eksekusiExportExcel() {
+    const bulan = document.getElementById('selectBulan').value;
+    const tahun = document.getElementById('selectTahun').value;
+    
+    const dataFiltered = dataTransaksi.filter(t => {
+        const parts = t.tglDisplay.split('/');
+        return parts[1] === bulan && parts[2] === tahun;
+    });
+
+    if (dataFiltered.length === 0) return alert("Data tidak ditemukan!");
+
+    // Buat elemen tabel tersembunyi untuk styling warna
+    let tableHtml = `
+        <table border="1">
+            <tr><th colspan="8" style="font-size:16px; font-weight:bold;">LAPORAN PENJUALAN KANGKREDIT</th></tr>
+            <tr><th colspan="8" style="font-weight:bold;">Periode: ${bulan}-${tahun}</th></tr>
+            <tr></tr>
+            <tr style="background-color: #10b981; color: white; font-weight: bold;">
+                <th style="width:100px;">TANGGAL</th>
+                <th style="width:150px;">PELANGGAN</th>
+                <th style="width:200px;">ALAMAT</th>
+                <th style="width:200px;">BARANG</th>
+                <th style="width:120px;">TOTAL HARGA</th>
+                <th style="width:120px;">DIBAYAR</th>
+                <th style="width:120px;">SISA PIUTANG</th>
+                <th style="width:100px;">STATUS</th>
+            </tr>
+    `;
+
+    let gTotal = 0, gBayar = 0, gSisa = 0;
+
+    dataFiltered.forEach(t => {
+        const bayar = (t.cicilan || []).reduce((sum, c) => sum + (parseFloat(c.jml) || 0), 0);
+        tableHtml += `
+            <tr>
+                <td>${t.tglDisplay}</td>
+                <td>${t.pembeli.toUpperCase()}</td>
+                <td>${t.alamat || "-"}</td>
+                <td>${t.barang}</td>
+                <td>Rp ${t.harga.toLocaleString('id-ID')}</td>
+                <td>Rp ${bayar.toLocaleString('id-ID')}</td>
+                <td style="color:red;">Rp ${t.sisa.toLocaleString('id-ID')}</td>
+                <td>${t.status.toUpperCase()}</td>
+            </tr>
+        `;
+        gTotal += t.harga; gBayar += bayar; gSisa += t.sisa;
+    });
+
+    tableHtml += `
+            <tr style="background-color: #f3f4f6; font-weight:bold;">
+                <td colspan="4" align="right">TOTAL KESELURUHAN</td>
+                <td>Rp ${gTotal.toLocaleString('id-ID')}</td>
+                <td>Rp ${gBayar.toLocaleString('id-ID')}</td>
+                <td>Rp ${gSisa.toLocaleString('id-ID')}</td>
+                <td></td>
+            </tr>
+        </table>
+    `;
+
+
+    // Format: kk_190226060530_laporan_02-2026.xls
+    const namaFile = `kangkredit_lapor_${bulan}-${tahun}.xls`;
+
+    // Proses Download
+    const url = 'data:application/vnd.ms-excel,' + encodeURIComponent(tableHtml);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = namaFile;
+    link.click();
+    
+    closeModal('modalPilihBulan');
+}
+
+
 </script>
+
+<div id="modalPilihBulan" class="modal flex items-center justify-center p-4" style="display: none; z-index: 100;">
+    <div class="bg-white p-8 rounded-[2rem] shadow-2xl w-full max-w-xs border border-slate-100">
+        <h3 class="font-black text-slate-800 uppercase text-xs mb-4 text-center tracking-widest">Pilih Bulan Laporan</h3>
+        <select id="selectBulan" class="w-full p-3 bg-slate-50 border rounded-2xl mb-4 font-bold text-sm outline-none">
+            <option value="01">Januari</option><option value="02">Februari</option>
+            <option value="03">Maret</option><option value="04">April</option>
+            <option value="05">Mei</option><option value="06">Juni</option>
+            <option value="07">Juli</option><option value="08">Agustus</option>
+            <option value="09">September</option><option value="10">Oktober</option>
+            <option value="11">November</option><option value="12">Desember</option>
+        </select>
+        <select id="selectTahun" class="w-full p-3 bg-slate-50 border rounded-2xl mb-6 font-bold text-sm outline-none">
+            <option value="2025">2025</option><option value="2026" selected>2026</option>
+        </select>
+        <div class="flex gap-2">
+            <button onclick="closeModal('modalPilihBulan')" class="flex-1 py-3 bg-slate-100 rounded-xl font-bold text-xs">Batal</button>
+            <button onclick="eksekusiExportExcel()" class="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-black text-xs shadow-lg">Export</button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
-
